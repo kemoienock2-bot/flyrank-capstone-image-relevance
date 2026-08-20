@@ -1,0 +1,54 @@
+# capstone.yaml — evaluator manifest
+# Tells anyone (human or automated) how to run, seed, and test this project
+# without needing to read every script first.
+
+run: uvicorn review_api:app --host 127.0.0.1 --port 8000
+
+seed: >
+  python run_batch.py &&
+  python embed_images.py &&
+  python load_blog_posts.py &&
+  python add_expected_category.py &&
+  python add_review_columns.py &&
+  python compute_matches.py
+
+test: pytest test_pipeline.py -v
+
+base_url: http://127.0.0.1:8000
+
+endpoints:
+  - method: GET
+    path: /health
+    description: Basic liveness check.
+
+  - method: GET
+    path: /matches
+    description: >
+      List scored image/post pairs. Supports query params:
+      guard_decision (approved|rejected), category, reviewed (true|false),
+      limit.
+
+  - method: GET
+    path: /matches/{match_id}
+    description: Full detail for one scored pair, joined with image and post info.
+
+  - method: POST
+    path: /matches/{match_id}/review
+    description: >
+      Record a human decision on a match. Body: {"decision": "approved"|"rejected",
+      "note": "optional string"}. Never overwrites the original guard_decision.
+
+  - method: GET
+    path: /images/{image_id}/matches
+    description: >
+      All blog posts scored against one image, best similarity first.
+      Optional query param include_rejected=true to see the full picture,
+      not just approved matches.
+
+notes: >
+  Requires two free API keys to seed from scratch: UNSPLASH_ACCESS_KEY
+  (for collect_dataset.py, which downloads the source images — not part
+  of the seed command above since the image dataset is already committed
+  under data/raw/) and GEMINI_API_KEY (for run_batch.py). See
+  .env.example for the full list. embed_images.py and everything after
+  it runs fully locally with no API key needed.

@@ -1,0 +1,16 @@
+# Secrets — never commit real keys
+.env
+
+# Database — contains your actual run data, not needed in the repo itself
+# (the pipeline is fully reproducible from the scripts + data/raw/ + data/*.csv)
+data/pipeline.db
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/

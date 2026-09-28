@@ -64,6 +64,53 @@ part of the output to actually distrust.
 Everything else — the guard's core purpose, the matching approach, the
 review workflow — follows the brief as written.
 
+## Using it from an AI agent (MCP server)
+
+`mcp_server.py` exposes the matching engine over the
+[Model Context Protocol](https://modelcontextprotocol.io), so an AI agent
+(Claude Desktop, an IDE agent, the MCP Inspector) can query and review
+matches directly.
+
+| Tool | What it does | Writes? |
+|---|---|---|
+| `check_pair` | Runs the guard on a hypothetical image/post pair and explains the decision | No |
+| `list_matches` | Lists stored matches, filterable by guard decision, category, review status | No |
+| `get_match` | Full detail for one match | No |
+| `matches_for_image` | Every post scored against one image, best first | No |
+| `review_match` | Records a human decision; requires a note; never overwrites the guard's decision | **Yes** |
+
+**Run it**
+
+```bash
+pip install "mcp[cli]>=2,<3"
+mcp dev mcp_server.py      # opens the MCP Inspector in your browser
+pytest -q test_mcp_server.py
+```
+
+**Connect it to Claude Desktop** by adding this to `claude_desktop_config.json`
+(use absolute paths):
+
+```json
+{
+  "mcpServers": {
+    "image-relevance": {
+      "command": "python",
+      "args": ["C:/path/to/flyrank-capstone-image-relevance/mcp_server.py"]
+    }
+  }
+}
+```
+
+**Design choices**
+- The database path is resolved relative to the script, not the working
+  directory, because MCP hosts launch servers from an arbitrary folder.
+- Expected failures (unknown id, bad input) come back as an `error` field
+  the agent can read and recover from, not a crash.
+- Only one tool writes, it demands an explanation, and it leaves the guard's
+  original reasoning untouched — the same audit rule as `review_api.py`.
+- Nothing is printed to stdout: over stdio, stdout is the protocol channel.
+
+
 ## Project structure
 
 ```
